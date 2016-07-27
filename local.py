@@ -112,7 +112,7 @@ class Localize(object):
             cv2.imwrite('cam1_img/' + str(imageName).zfill(4) + '.png', image)
             file.write(str(imageName).zfill(4) + ":" + 'r\n')
             imageName += 1
-            if imageName == 10:
+            if imageName == 7:
                 self.ts('s')
                 break
 
@@ -126,7 +126,8 @@ class Localize(object):
             os.remove(file)
 
     def analyze(self):
-        a = analyzer('BOW', 800, 600)
+        # a = analyzer('BOW', 800, 600)
+        a = analyzer('SIFT', 320, 240)
         a.createRawP()
         a.processRaw()
         self.delete()

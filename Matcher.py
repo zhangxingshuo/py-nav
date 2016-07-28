@@ -119,6 +119,7 @@ class Matcher(object):
             print(imagePath)
             image = cv2.imread(imagePath)
             kp, des = desc.detectAndCompute(image, None)
+            # print(des)
             train_des_list.append((imagePath, des))
 
         # Stack them all in a numpy array
@@ -147,7 +148,8 @@ class Matcher(object):
         joblib.dump((im_features, image_paths, idf, numWords, voc), trainingPath + ".pkl", compress=3)
 
     def writeIndices(self):
-        for mapp in glob.glob('map/*/'):
+        for mapp in glob.glob('map/*/')[6:8]:
+            print(mapp)
             self.createIndex(mapp[:-1])
 
     def createFeatureIndex(self):

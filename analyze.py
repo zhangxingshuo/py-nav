@@ -29,7 +29,7 @@ extension = '.png'
 class analyzer(object):
 
     def __init__(self, method, width, height):
-        self.numLocations = 7
+        self.numLocations = 9
         self.indices = [None] * self.numLocations
         self.method = method
         self.w = width

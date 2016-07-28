@@ -10,12 +10,13 @@ NUM_LOCATIONS = 7
 Run = False
 
 class Circle(object):
-    def __init__(self, radius, x, y, folder, color):
+    def __init__(self, radius, x, y, folder, color, relativeCoord):
         self.r = radius
         self.x = x
         self.y = y
         self.folder = folder
         self.color = color
+        self.relativeCoord = relativeCoord
         # self.panoWindow = self.folder + " panorama"
         # self.pano = cv2.imread(self.folder + "_panorama.jpg")
 
@@ -187,11 +188,11 @@ def Laplacian(imagePath):
     var = cv2.Laplacian(img, cv2.CV_64F).var()
     return var
 
-def initializeCircle():
-    circles = [None] * NUM_LOCATIONS
-    for i in range(NUM_LOCATIONS):
-        circles[i] = Circle(50, 141 + 150 * i, 221, 'map/'+str(i), [150, 150, 150])
-    return circles
+# def initializeCircle():
+#     circles = [None] * NUM_LOCATIONS
+#     for i in range(NUM_LOCATIONS):
+#         circles[i] = Circle(50, 141 + 150 * i, 221, 'map/'+str(i), [150, 150, 150])
+#     return circles
 
 if __name__ == '__main__':
     # Initialize Screen

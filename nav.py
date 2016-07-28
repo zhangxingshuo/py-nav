@@ -7,10 +7,13 @@ from local import Localize
 # from arduino import Arduino
 from GUI import *
 
+NUM_COLUMNS = 7
+NUM_ROWS = 3
 
 class Navigator(object):
 
     def __init__(self):
+        # self.robot = Arduino()
         self.dest = [None, None]
         self.counter = 0
         self.state = 'Idle'
@@ -25,9 +28,7 @@ class Navigator(object):
         self.robot.connect((self.host,self.port))
         self.ipad.connect((self.ipadHost, self.ipadPort))
         print("Connected!!")
-        self.bestCircle = None
-        self.bestAngle = None
-        self.distances = {(0,1): 37, (1,2): 31.5, (2,3): 30.5, (3,4): 32, (4,5): 26.5, (5,6): 23}
+        self.distances = {(0,1): 37, (1,2): 31.5, (2,3): 30.5, (3,4): 32, (4,5): 26.5, (5,6): 23, (6,7): 42.5, (7,8):37 }
 
     def read(self, filename):
         file = open(filename, 'r')
@@ -81,12 +82,13 @@ class Navigator(object):
 
     def betterDoAction(self, currAngle, destAngle, currentCircle, destCircle):
         print(self.state)
-
+        currentColumn = currentCircle.relativeCoord[0]
+        currentRow = currentCircle.relativeCoord[1]
+        destColumn = destCircle.relativeCoord[0]
+        destRow = destCircle.relativeCoord[1]
+        destination = 0
         def determineAngle(destination, nextState):
             difference = destination - currAngle
-            if abs(difference) <= 15:
-                self.state = 'Done'
-                return
             if difference > 0:
                 if difference > 180: 
                     self.command = 'l'
@@ -121,36 +123,39 @@ class Navigator(object):
             return distance
 
         if self.state == 'Initializing':
-            if currentCircle < destCircle:
+            if currentColumn < destColumn:
                 destination = 90
-            elif currentCircle > destCircle:
+            elif currentColumn > destColumn:
                 destination = 270
-            elif currentCircle == destCircle:
+            elif currentColumn == destColumn:
                 self.state = 'Determine Direction'
                 return
-            if abs(currAngle - destination) <= 15:
+            if abs(currAngle - destination) <= 10:
                 self.state = 'Move Command'
             else:
                 self.state = 'Determine Turning'
 
         elif self.state == 'Determine Turning':
-            if currentCircle < destCircle:
+            if currentColumn < destColumn:
                 destination = 90
-            elif currentCircle > destCircle:
+            elif currentColumn > destColumn:
                 destination = 270
             determineAngle(destination, 'Turning')
 
         # Turn to face the destination circle
         elif self.state == 'Turning':
+            # if abs(currAngle - destination) <= 15:
+            #     self.state = 'Move Command'
+            #     return
             self.ts(self.command)
             self.state = 'Waiting'
 
         elif self.state == 'Waiting':
-            if currentCircle < destCircle:
+            if currentColumn < destColumn:
                 destination = 90
-            elif currentCircle > destCircle:
+            elif currentColumn > destColumn:
                 destination = 270
-            if abs(currAngle - destination) <= 15:
+            if abs(currAngle - destination) <= 10:
                 self.state = 'Move Command'
             else:
                 transition(3, 'Focusing')
@@ -170,9 +175,19 @@ class Navigator(object):
 
         elif self.state == 'Moving':
             self.counter += 1
-            if self.counter == int(1.8 * distance(currentCircle, destCircle)):
-                self.bestCircle = self.dest[0]
-                self.state = 'Determine Direction'
+            if currentColumn == destColumn:
+                if currentRow == destRow:
+                    self.state = 'Determine Direction'
+                    return
+                else:
+                    self.state = 'Row Transition'
+                    return
+            elif currentColumn < destColumn:
+                nextColumn = currentColumn + 1
+            else:
+                nextColumn = currentColumn - 1
+            if self.counter == int(1.8 * distance(currentColumn, nextColumn)):
+                self.bestCircle = self.circles[nextColumn]
                 self.counter = 0
 
         elif self.state == 'Determine Direction':
@@ -180,8 +195,12 @@ class Navigator(object):
 
         # Point in the right direction once in the destination circle
         elif self.state == 'Pointing':
-            if abs(currAngle - destAngle) <= 15:
-                self.state = 'Done'
+            if abs(currAngle - destAngle) <= 10:
+                if currentRow == destRow:
+                    self.state = 'Done'
+                else:
+                    self.state = 'Row Transition'
+                return
                 # self.ipad.close()
                 # l = Localize(self.robot)
                 # l.localize()
@@ -193,8 +212,8 @@ class Navigator(object):
                 self.state = 'Waiting 2'
 
         elif self.state == 'Waiting 2':
-            if abs(currAngle - destAngle) <= 15:
-                self.state = 'Done'
+            if abs(currAngle - destAngle) <= 10:
+                self.state = 'Row Transition'
 
             else:
                 transition(3, 'Focusing 2')
@@ -202,10 +221,61 @@ class Navigator(object):
         elif self.state == 'Focusing 2':
             wait(10, 'Pointing')
 
+        elif self.state == 'Row Transition':
+            if currentRow < destRow:
+                destination = 0
+            elif currentRow < destRow:
+                destination = 180
+            else:
+                self.state = 'Done'
+            determineAngle(destination, 'Row Turning')
+
+        elif self.state == 'Row Turning':
+            if abs(currAngle - destination) <= 10:
+                self.state = 'Move Row Command'
+                return
+            self.ts(self.command)
+            self.state = 'Row Waiting'
+
+        elif self.state == 'Move Row Command':
+            self.command = 'f'
+            self.ts(self.command)
+            self.state = 'Row Moving'
+
+        elif self.state == 'Row Moving':
+            self.counter += 1
+            if self.circles.index(currentCircle) == self.circles.index(destCircle):
+                self.state = 'Determine Direction'
+                return
+            else:
+                # Bad hard-coded stuff here
+                if currentRow == 0:
+                    nextCircleIndex = 7
+                elif currentRow == 1:
+                    nextCircleIndex = 8
+            if self.counter == int(1.8 * distance(self.circles.index(currentCircle), nextCircleIndex)):
+                self.bestCircle = self.circles[nextCircleIndex]
+                self.counter = 0
+
+        elif self.state == 'Row Waiting':
+            if currentColumn < destColumn:
+                destination = 90
+            elif currentColumn > destColumn:
+                destination = 270
+            if abs(currAngle - destination) <= 10:
+                self.state = 'Move Row Command'
+            else:
+                wait(10, 'Row Turning')
+
+
     def initializeCircle(self):
-        circles = [None] * NUM_LOCATIONS
-        for i in range(NUM_LOCATIONS):
-            circles[i] = Circle(50, 141 + 150 * i, 221, 'map/'+str(i), [150, 150, 150])
+        circles = [None] * (NUM_COLUMNS+NUM_ROWS)
+        for i in range(NUM_COLUMNS+ NUM_ROWS):
+            circles[i] = Circle(50, 141 + 150 * i, 400, 'map/'+str(i), [150, 150, 150], (i,0))
+        circles[7].relativeCoord = (5,1)
+        circles[7].x, circles[7].y = 891, 250
+        circles[8].relativeCoord = (5,2)
+        circles[8].x, circles[8].y = 891, 100 
         return circles
 
     def readGyro(self):
@@ -221,115 +291,119 @@ class Navigator(object):
         bestGuesses = [[content[x], content[x+1]] for x in range(len(content) - 1 ) [::2]    ]
         return bestGuesses
     
-    def CheckAndRun(self):
-        img = np.zeros((480,200 + 150 * NUM_LOCATIONS,3), np.uint8)
-        cv2.namedWindow('GUI')
+    # def CheckAndRun(self):
+    #     img = np.zeros((480,200 + 150 * NUM_COLUMNS,3), np.uint8)
+    #     cv2.namedWindow('GUI')
 
-        # make sure the robot is on the right mode
-        self.ts('RESET')
+    #     # make sure the robot is on the right mode
+    #     self.ts('RESET')
 
-        # Initiating Circles and Matches
-        circles = self.circles
+    #     # Initiating Circles and Matches
+    #     # circle1 = Circle(50, 141, 221, 'map/0', [150, 150, 150])
+    #     # circle2 = Circle(50, 304, 207, 'map/1', [150, 150, 150])
+    #     # circle3 = Circle(50, 498, 196, 'map/2', [150, 150, 150])
+    #     # circles = [circle1, circle2, circle3]
+    #     circles = self.initializeCircle()
 
-        # Initiating Arrows
-        arrows = []
-        for circle in circles:
-            arrows.append(getArrows(circle, 25))
+    #     # Initiating Arrows
+    #     arrows = []
+    #     for circle in circles:
+    #         arrows.append(getArrows(circle, 25))
 
-        def click(event, x, y, flags, param):
-            if event == cv2.EVENT_LBUTTONDOWN:
-                for circle in circles:
-                    if circle.inCircle((x,y)):
-                        if self.state == 'Idle':
-                            self.state = 'Turning'
+    #     def click(event, x, y, flags, param):
+    #         if event == cv2.EVENT_LBUTTONDOWN:
+    #             for circle in circles:
+    #                 if circle.inCircle((x,y)):
+    #                     if self.state == 'Idle':
+    #                         self.state = 'Turning'
 
-                        # Reset drawing
-                        drawCircle(circles, img)
-                        for arrow in arrows:
-                            drawArrows(arrow, img)
+    #                     # Reset drawing
+    #                     drawCircle(circles, img)
+    #                     for arrow in arrows:
+    #                         drawArrows(arrow, img)
 
-                        # Draw angle
-                        angle = math.atan2(circle.y-y, circle.x-x)
-                        angle *= 180/math.pi
-                        angle = int(15 * round(angle/15))
-                        angle -= 90
-                        if angle < 0:
-                            angle += 360
+    #                     # Draw angle
+    #                     angle = math.atan2(circle.y-y, circle.x-x)
+    #                     angle *= 180/math.pi
+    #                     angle = int(15 * round(angle/15))
+    #                     angle -= 90
+    #                     if angle < 0:
+    #                         angle += 360
 
-                        self.dest[1] = angle
-                        self.dest[0] = circle
+    #                     self.dest[1] = angle
+    #                     self.dest[0] = circle
 
-        cv2.setMouseCallback('GUI', click)
+    #     cv2.setMouseCallback('GUI', click)
 
-        previousProbs = [[1, [1/75] * 25 ], [1,[1/75] * 25 ] , [1,[1/75] * 25]]
+    #     previousProbs = [[1, [1/75] * 25 ], [1,[1/75] * 25 ] , [1,[1/75] * 25]]
 
-        while True:
-            img = np.zeros((480,200 + 150 * NUM_LOCATIONS,3), np.uint8)
+    #     while True:
+    #         img = np.zeros((480,200 + 150 * NUM_COLUMNS,3), np.uint8)
 
-            probL = self.read('out.txt')
-            while not probL:
-                probL = self.read('out.txt')
+    #         probL = self.read('out.txt')
+    #         while not probL:
+    #             probL = self.read('out.txt')
 
-            illustrateProb(circles, arrows, probL)
+    #         illustrateProb(circles, arrows, probL)
 
-            drawCircle(circles, img)
-            for arrow in arrows:
-                drawArrows(arrow, img)
+    #         drawCircle(circles, img)
+    #         for arrow in arrows:
+    #             drawArrows(arrow, img)
 
-            circleIndex = probL.index(max(probL, key=lambda item:item[0]))
-            angleIndex = probL[circleIndex][1].index(max(probL[circleIndex][1]))
-            bestCircle = circles[circleIndex]
-            bestAngle = (angleIndex*15) * math.pi/180
+    #         circleIndex = probL.index(max(probL, key=lambda item:item[0]))
+    #         angleIndex = probL[circleIndex][1].index(max(probL[circleIndex][1]))
+    #         bestCircle = circles[circleIndex]
+    #         bestAngle = (angleIndex*15) * math.pi/180
 
-            # Draw best guess angle
-            cv2.arrowedLine(img, (bestCircle.x, bestCircle.y, ), 
-                (int(bestCircle.x - 60*math.cos(bestAngle + math.pi/2)), int(bestCircle.y - 60*math.sin(bestAngle + math.pi/2))), 
-                (0, 255, 0), 3)
+    #         # Draw best guess angle
+    #         cv2.arrowedLine(img, (bestCircle.x, bestCircle.y, ), 
+    #             (int(bestCircle.x - 60*math.cos(bestAngle + math.pi/2)), int(bestCircle.y - 60*math.sin(bestAngle + math.pi/2))), 
+    #             (0, 255, 0), 3)
 
-            if self.dest[0] != None and self.dest[1] != None:
-                circle = self.dest[0]
-                angle = self.dest[1]
+    #         if self.dest[0] != None and self.dest[1] != None:
+    #             circle = self.dest[0]
+    #             angle = self.dest[1]
                 
-                # Draw destination arrow
-                cv2.arrowedLine(img, (circle.x, circle.y), 
-                    (int(circle.x-60*math.cos(angle*math.pi/180+math.pi/2)), int(circle.y-60*math.sin(angle*math.pi/180+math.pi/2))), 
-                    (255, 255, 255), 3)
-                self.doAction(self.dest[1], angleIndex*15)
-                self.write('command.txt')
+    #             # Draw destination arrow
+    #             cv2.arrowedLine(img, (circle.x, circle.y), 
+    #                 (int(circle.x-60*math.cos(angle*math.pi/180+math.pi/2)), int(circle.y-60*math.sin(angle*math.pi/180+math.pi/2))), 
+    #                 (255, 255, 255), 3)
+    #             self.doAction(self.dest[1], angleIndex*15)
+    #             self.write('command.txt')
             
 
-            cv2.imshow('GUI', img)
-            k = cv2.waitKey(1)
-            if k == 27:
-                break
+    #         cv2.imshow('GUI', img)
+    #         k = cv2.waitKey(1)
+    #         if k == 27:
+    #             break
 
-        cv2.destroyAllWindows()
-        self.ts('s')
+    #     cv2.destroyAllWindows()
+    #     self.ts('s')
 
     def IntervalRun(self):
-        img = np.zeros((480,200 + 150 * NUM_LOCATIONS,3), np.uint8)
+        img = np.zeros((480 + 150*NUM_ROWS,200 + 150 * NUM_COLUMNS,3), np.uint8)
         cv2.namedWindow('GUI')
 
         # make sure the robot is on the right mode
         self.ts('RESET')
 
         # Initiating Circles
-        circles = initializeCircle()
+        self.circles = self.initializeCircle()
 
         # Initiating Arrows
         arrows = []
-        for circle in circles:
+        for circle in self.circles:
             arrows.append(getArrows(circle, 25))
 
         def click(event, x, y, flags, param):
             if event == cv2.EVENT_LBUTTONDOWN:
-                for circle in circles:
+                for circle in self.circles:
                     if circle.inCircle((x,y)):
                         if self.state == 'Idle' or self.state == 'Done':
                             self.state = 'Initializing'
 
                         # Reset drawing
-                        drawCircle(circles, img)
+                        drawCircle(self.circles, img)
                         for arrow in arrows:
                             drawArrows(arrow, img)
 
@@ -342,7 +416,9 @@ class Navigator(object):
                             angle += 360
 
                         self.dest[1] = angle
-                        self.dest[0] = circle
+                        # cirlceCoordinate = circle.relativeCoord
+                        self.dest[0] = circle 
+                        print(self.dest[0])
 
         self.ipad.close()
         l = Localize(self.robot)
@@ -354,33 +430,33 @@ class Navigator(object):
         cv2.setMouseCallback('GUI', click)
         currentAngleIndex = self.readBestGuess('bestGuess.txt')[-1][1]
         currentCircleIndex = self.readBestGuess('bestGuess.txt')[-1][0]
-        self.bestCircle = circles[currentCircleIndex]
+        self.bestCircle = self.circles[currentCircleIndex]
         self.bestAngle = currentAngleIndex * 15 *math.pi/180
         displacement = 0
         imageIndex = 0
         prevAng = self.readGyro()
         file = open('commands.txt', 'w')
         while True:
-            img = np.zeros((480,200 + 150 * NUM_LOCATIONS,3), np.uint8)
+            img = np.zeros((480,200 + 150 * NUM_COLUMNS,3), np.uint8)
 
             currentAngleIndex = self.readBestGuess('bestGuess.txt')[-1][1]
             currentCircleIndex = self.readBestGuess('bestGuess.txt')[-1][0]
-            # localizedCircle = circles[currentCircleIndex]
-            # localizedAngle = currentAngleIndex * 15 *math.pi/180
+            localizedCircle = self.circles[currentCircleIndex]
+            localizedAngle = currentAngleIndex * 15 *math.pi/180
 
-            drawCircle(circles, img)
+            drawCircle(self.circles, img)
             for arrow in arrows:
                 drawArrows(arrow, img)
 
-            # Draw best guess angle
+            # # Draw best guess angle
             cv2.arrowedLine(img, (self.bestCircle.x, self.bestCircle.y, ), 
                 (int(self.bestCircle.x - 60*math.cos(self.bestAngle + math.pi/2)), 
-                int(self.bestCircle.y - 60*math.sin(self.bestAngle + math.pi/2))), 
+                    int(self.bestCircle.y - 60*math.sin(self.bestAngle + math.pi/2))), 
                 (0, 255, 0), 3)
 
-            # cv2.arrowedLine(img, (localizedCircle.x, localizedCircle.y, ),
-            #     (int(localizedCircle.x - 60 * math.cos(localizedAngle + math.pi/2)), int(localizedCircle.y - 60*math.sin(localizedAngle + math.pi/2))),
-            #     (0, 255, 0), 3 )
+            cv2.arrowedLine(img, (localizedCircle.x, localizedCircle.y, ),
+                (int(localizedCircle.x - 60 * math.cos(localizedAngle + math.pi/2)), int(localizedCircle.y - 60*math.sin(localizedAngle + math.pi/2))),
+                (0, 255, 0), 3 )
 
              # Check for current location
             self.bestAngle = self.bestAngle - 1.0 *displacement 
@@ -395,7 +471,7 @@ class Navigator(object):
                 cv2.arrowedLine(img, (circle.x, circle.y), 
                     (int(circle.x-60*math.cos(angle*math.pi/180+math.pi/2)), int(circle.y-60*math.sin(angle*math.pi/180+math.pi/2))), 
                     (255, 255, 255), 3)
-                self.betterDoAction((self.bestAngle*180./math.pi) % 360, self.dest[1], circles.index(self.bestCircle), circles.index(self.dest[0]))
+                self.betterDoAction((self.bestAngle*180./math.pi) % 360, self.dest[1], self.bestCircle, self.dest[0])
                 print(self.command)
                 # l.save(imageIndex)
                 # file.write(str(imageIndex).zfill(4) + ':' + self.command + '\n')

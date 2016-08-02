@@ -18,17 +18,34 @@ class Navigator(object):
         self.counter = 0
         self.state = 'Idle'
         self.command = 's'
-        self.host = '134.173.25.106'
-        self.ipadHost = '134.173.24.116'
-        self.ipadPort = 5003
+        self.host = '134.173.27.40'
+        self.ipadHost = '134.173.29.21'
+        self.ipadPort = 5001
         self.port = 5000
         self.robot = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ipad= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print("Connecting...")
-        self.robot.connect((self.host,self.port))
+        # self.robot.connect((self.host,self.port))
         self.ipad.connect((self.ipadHost, self.ipadPort))
         print("Connected!!")
-        self.distances = {(0,1): 37, (1,2): 31.5, (2,3): 30.5, (3,4): 32, (4,5): 26.5, (5,6): 23, (6,7): 42.5, (7,8):37 }
+        self.tempDest = None
+        self.distances = {( (0,0), (1,0) ):37,
+        ( (1,0), (2,0) ):31.5,
+        ( (2,0), (3,0) ):30.5,
+        ( (3,0), (4,0) ):32,
+        ( (4,0), (5,0) ):26.5,
+        ( (5,0), (6,0) ):23,
+        ( (5,0), (5,1) ):42.5,
+        ( (5,1), (5,2) ):37,
+        ( (1,0), (0,0) ):37,
+        ( (2,0), (0,0) ):31.5,
+        ( (3,0), (2,0) ):30.5,
+        ( (4,0), (3,0) ):32,
+        ( (5,0), (4,0) ):26.5,
+        ( (6,0), (5,0) ):23,
+        ( (5,1), (5,0) ):42.5,
+        ( (5,2), (5,1) ):37}
+        # self.distances = {((0,0),(1,0)): 37, ((1,0),(2,0)): 31.5, ((2,0),(3,0)): 30.5, ((3,0),(4,0)): 32, (4,,5): 26.5, (5,6): 23, (6,7): 42.5, (7,8):37 }
 
     def read(self, filename):
         file = open(filename, 'r')
@@ -40,66 +57,259 @@ class Navigator(object):
         return results
 
     def ts(self, message):
-       self.robot.send(str(message).encode()) 
+       # self.robot.send(str(message).encode()) 
        data = ''
-       data = self.robot.recv(1024).decode()
+       # data = self.robot.recv(1024).decode()
        print (data)
 
     def write(self, filename):
         file = open(filename, 'w')
         file.write(self.command)
 
-    def doAction(self, currAngle, destAngle):
-        print(self.state)
-        if abs(currAngle-destAngle) <= 15:
-            self.state = 'Idle'
-            self.counter = 0
-            return
-        if self.state == 'Turning':
-            self.command = 'l'
-            self.ts(self.command)
-            self.state = 'Waiting'
-        elif self.state == 'Waiting':
-            self.counter += 1
-            if self.counter == 5:
-                self.counter = 0
-                self.command = 's'
-                self.ts(self.command)
-                self.state = 'Focusing'
-        elif self.state == 'Focusing':
-            self.counter += 1
-            if self.counter == 300:
-                self.counter = 0
-                self.state = 'Turning'
-        elif self.state == 'Check Angle':
-            self.counter += 1
-            if self.counter == 100:
-                if abs(currAngle-destAngle) <= 15:
-                    self.state = 'Idle'
-                else:
-                    self.state = 'Turning'
-                self.counter = 0
+    # def doAction(self, currAngle, destAngle):
+    #     print(self.state)
+    #     if abs(currAngle-destAngle) <= 15:
+    #         self.state = 'Idle'
+    #         self.counter = 0
+    #         return
+    #     if self.state == 'Turning':
+    #         self.command = 'l'
+    #         self.ts(self.command)
+    #         self.state = 'Waiting'
+    #     elif self.state == 'Waiting':
+    #         self.counter += 1
+    #         if self.counter == 5:
+    #             self.counter = 0
+    #             self.command = 's'
+    #             self.ts(self.command)
+    #             self.state = 'Focusing'
+    #     elif self.state == 'Focusing':
+    #         self.counter += 1
+    #         if self.counter == 300:
+    #             self.counter = 0
+    #             self.state = 'Turning'
+    #     elif self.state == 'Check Angle':
+    #         self.counter += 1
+    #         if self.counter == 100:
+    #             if abs(currAngle-destAngle) <= 15:
+    #                 self.state = 'Idle'
+    #             else:
+    #                 self.state = 'Turning'
+    #             self.counter = 0
 
-    def betterDoAction(self, currAngle, destAngle, currentCircle, destCircle):
+    # def betterDoAction(self, currAngle, destAngle, currentCircle, destCircle):
+    #     print(self.state)
+    #     currentColumn = currentCircle.relativeCoord[0]
+    #     currentRow = currentCircle.relativeCoord[1]
+    #     destColumn = destCircle.relativeCoord[0]
+    #     destRow = destCircle.relativeCoord[1]
+    #     destination = 0
+    #     def determineAngle(destination, nextState):
+    #         difference = destination - currAngle
+    #         if difference > 0:
+    #             if difference > 180: 
+    #                 self.command = 'l'
+    #             else:
+    #                 self.command = 'r'
+    #         elif difference < 0:
+    #             if difference < -180:
+    #                 self.command = 'r'
+    #             else:
+    #                 self.command = 'l'
+    #         self.state = nextState
+
+    #     def transition(counter, nextState):
+    #         self.counter += 1
+    #         if self.counter == counter:
+    #             self.counter = 0
+    #             self.ts('s')
+    #             self.state = nextState
+
+    #     def wait(counter, nextState):
+    #         self.counter += 1
+    #         if self.counter == counter:
+    #             self.counter = 0
+    #             self.state = nextState
+
+    #     def distance(currIndex, destIndex):
+    #         start = min(currIndex, destIndex)
+    #         end = max(currIndex, destIndex)
+    #         distance = 0
+    #         for i in range(start, end):
+    #             distance += self.distances[(i, i+1)]
+    #         return distance
+
+    #     if self.state == 'Initializing':
+    #         if currentRow == destRow:
+    #             if currentColumn < destColumn:
+    #                 destination = 90
+    #             elif currentColumn > destColumn:
+    #                 destination = 270
+    #             elif currentColumn == destColumn:
+    #                 self.state = 'Determine Direction'
+    #                 return
+    #         elif currentColumn == destColumn and currentRow != destRow:
+    #             self.state = 'Row Transition'
+    #             return
+
+    #         if abs(currAngle - destination) <= 10:
+    #             self.state = 'Move Command'
+    #         else:
+    #             self.state = 'Determine Turning'
+
+    #     elif self.state == 'Determine Turning':
+    #         if currentColumn < destColumn:
+    #             destination = 90
+    #         elif currentColumn > destColumn:
+    #             destination = 270
+    #         determineAngle(destination, 'Turning')
+
+    #     # Turn to face the destination circle
+    #     elif self.state == 'Turning':
+    #         # if abs(currAngle - destination) <= 15:
+    #         #     self.state = 'Move Command'
+    #         #     return
+    #         self.ts(self.command)
+    #         self.state = 'Waiting'
+
+    #     elif self.state == 'Waiting':
+    #         if currentColumn < destColumn:
+    #             destination = 90
+    #         elif currentColumn > destColumn:
+    #             destination = 270
+    #         if abs(currAngle - destination) <= 10:
+    #             self.state = 'Move Command'
+    #         else:
+    #             transition(3, 'Focusing')
+
+    #     elif self.state == 'Focusing':
+    #         wait(10, 'Turning')
+
+    #     # Move to the destination circle
+    #     elif self.state == 'Move Command':
+    #         # if currentCircle < destCircle:
+    #         #     self.command = 'f'
+    #         # else:
+    #         #     self.command = 'b'
+    #         self.command = 'f'
+    #         self.ts(self.command)
+    #         self.state = 'Moving'
+
+    #     elif self.state == 'Moving':
+    #         self.counter += 1
+    #         if currentColumn == destColumn:
+    #             if currentRow == destRow:
+    #                 self.state = 'Determine Direction'
+    #                 return
+    #             else:
+    #                 self.state = 'Row Transition'
+    #                 return
+    #         elif currentColumn < destColumn:
+    #             nextColumn = currentColumn + 1
+    #         else:
+    #             nextColumn = currentColumn - 1
+    #         if self.counter == int(1.8 * distance(currentColumn, nextColumn)):
+    #             self.bestCircle = self.circles[nextColumn]
+    #             self.counter = 0
+
+    #     elif self.state == 'Determine Direction':
+    #        determineAngle(destAngle, 'Pointing')
+
+    #     # Point in the right direction once in the destination circle
+    #     elif self.state == 'Pointing':
+    #         if abs(currAngle - destAngle) <= 10:
+    #             if currentRow == destRow:
+    #                 self.state = 'Done'
+    #             else:
+    #                 self.state = 'Row Transition'
+    #             return
+    #             # self.ipad.close()
+    #             # l = Localize(self.robot)
+    #             # l.localize()
+    #             # l.analyze()
+    #             # self.ipad= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #             # self.ipad.connect((self.ipadHost, self.ipadPort))
+    #         else:
+    #             self.ts(self.command)
+    #             self.state = 'Waiting 2'
+
+    #     elif self.state == 'Waiting 2':
+    #         if abs(currAngle - destAngle) <= 10:
+    #             self.state = 'Row Transition'
+    #         else:
+    #             transition(3, 'Focusing 2')
+
+    #     elif self.state == 'Focusing 2':
+    #         wait(10, 'Pointing')
+
+    #     elif self.state == 'Row Transition':
+    #         if currentRow < destRow:
+    #             destination = 0
+    #         elif currentRow > destRow:
+    #             destination = 180
+    #         else:
+    #             self.state = 'Done'
+    #         determineAngle(destination, 'Row Turning')
+
+    #     elif self.state == 'Row Turning':
+    #         if abs(currAngle - destination) <= 10:
+    #             self.state = 'Move Row Command'
+    #             return
+    #         self.ts(self.command)
+    #         self.state = 'Row Waiting'
+
+    #     elif self.state == 'Move Row Command':
+    #         self.command = 'f'
+    #         self.ts(self.command)
+    #         self.state = 'Row Moving'
+
+    #     elif self.state == 'Row Moving':
+    #         self.counter += 1
+    #         # print(currentRow)
+    #         if self.circles.index(currentCircle) == self.circles.index(destCircle):
+    #             self.state = 'Determine Direction'
+    #             return
+    #         else:
+    #             # Bad hard-coded stuff here
+                
+    #             if currentRow < destRow:
+    #                 for circle in self.circles:
+    #                     if circle.relativeCoord == (currentColumn, currentRow + 1):
+    #                         nextCircleIndex = self.circles.index(circle)
+    #             elif currentRow > destRow:
+    #                 for circle in self.circles:
+    #                     if circle.relativeCoord == (currentColumn, currentRow - 1):
+    #                         nextCircleIndex = self.circles.index(circle)
+    #             # if currentRow == 0:
+    #             #     nextCircleIndex = 7
+    #             # elif currentRow == 1:
+    #             #     nextCircleIndex = 8
+    #         if self.counter == int(1.8 * distance(self.circles.index(currentCircle), nextCircleIndex)):
+    #             self.bestCircle = self.circles[nextCircleIndex]
+    #             self.counter = 0
+
+    #     elif self.state == 'Row Waiting':
+    #         if currentColumn < destColumn:
+    #             destination = 90
+    #         elif currentColumn > destColumn:
+    #             destination = 270
+    #         if abs(currAngle - destination) <= 10:
+    #             self.state = 'Move Row Command'
+    #         else:
+    #             wait(10, 'Row Turning')
+
+    #     # print(destRow)
+
+    def evenBetterDoAction(self, currAngle, destAngle, currentCircle, destCircle):
         print(self.state)
         currentColumn = currentCircle.relativeCoord[0]
         currentRow = currentCircle.relativeCoord[1]
         destColumn = destCircle.relativeCoord[0]
         destRow = destCircle.relativeCoord[1]
-        destination = 0
-        def determineAngle(destination, nextState):
-            difference = destination - currAngle
-            if difference > 0:
-                if difference > 180: 
-                    self.command = 'l'
-                else:
-                    self.command = 'r'
-            elif difference < 0:
-                if difference < -180:
-                    self.command = 'r'
-                else:
-                    self.command = 'l'
-            self.state = nextState
+        
+        if self.tempDest is not None:
+            destColumn = self.tempDest[0]
+            destRow = self.tempDest[1]
 
         def transition(counter, nextState):
             self.counter += 1
@@ -114,159 +324,171 @@ class Navigator(object):
                 self.counter = 0
                 self.state = nextState
 
-        def distance(currIndex, destIndex):
-            start = min(currIndex, destIndex)
-            end = max(currIndex, destIndex)
-            distance = 0
-            for i in range(start, end):
-                distance += self.distances[(i, i+1)]
-            return distance
+        def determineAngle(destination, nextState):
+            difference = destination - currAngle
+            if difference > 0:
+                if difference > 180: 
+                    self.command = 'l'
+                else:
+                    self.command = 'r'
+            elif difference < 0:
+                if difference < -180:
+                    self.command = 'r'
+                else:
+                    self.command = 'l'
+            self.state = nextState
+
 
         if self.state == 'Initializing':
-            if currentColumn < destColumn:
-                destination = 90
-            elif currentColumn > destColumn:
-                destination = 270
-            elif currentColumn == destColumn:
+            if currentColumn == destColumn and currentRow == destRow:
+                self.state = 'Pointing Direction'
+            elif currentColumn != destColumn and currentRow != destRow:
+                self.state = 'Planning'
+            else:
                 self.state = 'Determine Direction'
-                return
+
+        ################################################
+        ### Pointing (Intra-circle Angle Transition) ###
+        ################################################
+
+        elif self.state == 'Pointing Direction':
+            determineAngle(destAngle, 'Pointing')
+
+        elif self.state == 'Pointing':
+            if currentColumn == destColumn and currentRow == destRow:
+                if abs(currAngle - destAngle) <= 10:
+                    self.state = 'Done'
+                    return
+            if currentColumn == destColumn:
+                if currentRow < destRow:
+                    destination = 0
+                else:
+                    destination = 180
+            else:
+                if currentColumn < destColumn:
+                    destination = 90
+                else:
+                    destination = 270
             if abs(currAngle - destination) <= 10:
                 self.state = 'Move Command'
             else:
-                self.state = 'Determine Turning'
+                self.ts(self.command)
+                self.state = 'Transitioning'
 
-        elif self.state == 'Determine Turning':
-            if currentColumn < destColumn:
-                destination = 90
-            elif currentColumn > destColumn:
-                destination = 270
-            determineAngle(destination, 'Turning')
-
-        # Turn to face the destination circle
-        elif self.state == 'Turning':
-            # if abs(currAngle - destination) <= 15:
-            #     self.state = 'Move Command'
-            #     return
-            self.ts(self.command)
-            self.state = 'Waiting'
-
-        elif self.state == 'Waiting':
-            if currentColumn < destColumn:
-                destination = 90
-            elif currentColumn > destColumn:
-                destination = 270
-            if abs(currAngle - destination) <= 10:
-                self.state = 'Move Command'
-            else:
-                transition(3, 'Focusing')
+        elif self.state == 'Transitioning':
+            transition(3, 'Focusing')
 
         elif self.state == 'Focusing':
-            wait(10, 'Turning')
+            wait(10, 'Pointing')
 
-        # Move to the destination circle
+        ###########################################################
+        ### Determine Direction (Inter-circle Angle Transition) ###
+        ###########################################################
+
+        elif self.state == 'Determine Direction':
+            if currentColumn == destColumn:
+                if currentRow < destRow:
+                    destination = 0
+                else:
+                    destination = 180
+            else:
+                if currentColumn < destColumn:
+                    destination = 90
+                else:
+                    destination = 270
+            determineAngle(destination, 'Pointing')
+
+        ######################
+        ### Moving Forward ###
+        ######################
+
         elif self.state == 'Move Command':
-            # if currentCircle < destCircle:
-            #     self.command = 'f'
-            # else:
-            #     self.command = 'b'
             self.command = 'f'
             self.ts(self.command)
             self.state = 'Moving'
 
         elif self.state == 'Moving':
             self.counter += 1
-            if currentColumn == destColumn:
-                if currentRow == destRow:
-                    self.state = 'Determine Direction'
-                    return
-                else:
-                    self.state = 'Row Transition'
-                    return
-            elif currentColumn < destColumn:
-                nextColumn = currentColumn + 1
-            else:
-                nextColumn = currentColumn - 1
-            if self.counter == int(1.8 * distance(currentColumn, nextColumn)):
-                self.bestCircle = self.circles[nextColumn]
-                self.counter = 0
+            if currentRow == destRow and currentColumn == destColumn:
+                self.tempDest = None
+                self.state = 'Initializing'
 
-        elif self.state == 'Determine Direction':
-           determineAngle(destAngle, 'Pointing')
-
-        # Point in the right direction once in the destination circle
-        elif self.state == 'Pointing':
-            if abs(currAngle - destAngle) <= 10:
+            # self.ts('r')
+            # self.ts(self.command)
+            
+            if abs(currAngle - 0) < 15 or abs(currAngle - 360) < 15:
+                directionAngle = 0
                 if currentRow == destRow:
-                    self.state = 'Done'
-                else:
-                    self.state = 'Row Transition'
-                return
-                # self.ipad.close()
-                # l = Localize(self.robot)
-                # l.localize()
-                # l.analyze()
-                # self.ipad= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                # self.ipad.connect((self.ipadHost, self.ipadPort))
+                    self.state = 'Pointing Direction'
+                    return
+                for circle in self.circles:
+                    if circle.relativeCoord == (currentColumn, currentRow + 1):
+                        nextCircle = circle
+            elif abs(currAngle - 90) < 15:
+                directionAngle= 90
+                if currentColumn == destColumn:
+                    self.state = 'Pointing Direction'
+                    return
+                for circle in self.circles:
+                    if circle.relativeCoord == (currentColumn + 1, currentRow):
+                        nextCircle = circle
+            elif abs(currAngle - 180) < 15:
+                directionAngle = 180
+                if currentRow == destRow:
+                    self.state = 'Pointing Direction'
+                    return
+                for circle in self.circles:
+                    if circle.relativeCoord == (currentColumn, currentRow - 1):
+                        nextCircle = circle
+            elif abs(currAngle - 270) < 15:
+                directionAngle = 270
+                if currentColumn == destColumn:
+                    self.state = 'Pointing Direction'
+                    return
+                for circle in self.circles:
+                    if circle.relativeCoord == (currentColumn - 1, currentRow):
+                        nextCircle = circle
             else:
+                # if directionAngle == 0:
+                #     if currAngle - directionAngle < 350:
+                #         self.ts('r')
+                #         self.ts(self.command)
+                # if directionAngle == 90:
+                #     if currAngle - directionAngle < -10:
+                #         self.ts('r')
+                #         self.ts(self.command)
+                # if directionAngle == 180:
+                #     if currAngle - directionAngle < -10:
+                #         self.ts('r')
+                #         self.ts(self.command)
+                # if directionAngle == 270:
+                #     if currAngle - directionAngle < -10:
+                #         self.ts('r')
+                #         self.ts(self.command)
+                self.command = 's'
                 self.ts(self.command)
-                self.state = 'Waiting 2'
-
-        elif self.state == 'Waiting 2':
-            if abs(currAngle - destAngle) <= 10:
-                self.state = 'Row Transition'
-
-            else:
-                transition(3, 'Focusing 2')
-
-        elif self.state == 'Focusing 2':
-            wait(10, 'Pointing')
-
-        elif self.state == 'Row Transition':
-            if currentRow < destRow:
-                destination = 0
-            elif currentRow < destRow:
-                destination = 180
-            else:
-                self.state = 'Done'
-            determineAngle(destination, 'Row Turning')
-
-        elif self.state == 'Row Turning':
-            if abs(currAngle - destination) <= 10:
-                self.state = 'Move Row Command'
-                return
-            self.ts(self.command)
-            self.state = 'Row Waiting'
-
-        elif self.state == 'Move Row Command':
-            self.command = 'f'
-            self.ts(self.command)
-            self.state = 'Row Moving'
-
-        elif self.state == 'Row Moving':
-            self.counter += 1
-            if self.circles.index(currentCircle) == self.circles.index(destCircle):
                 self.state = 'Determine Direction'
+                self.counter = 0
                 return
-            else:
-                # Bad hard-coded stuff here
-                if currentRow == 0:
-                    nextCircleIndex = 7
-                elif currentRow == 1:
-                    nextCircleIndex = 8
-            if self.counter == int(1.8 * distance(self.circles.index(currentCircle), nextCircleIndex)):
-                self.bestCircle = self.circles[nextCircleIndex]
+            # if self.counter % 25 == 0:
+            #     self.ts('r')
+            #     time.sleep(0.05)
+            #     self.ts(self.command) 
+            if self.counter == int(3.0 * self.distances[( (currentColumn, currentRow), nextCircle.relativeCoord )]):
+                self.bestCircle = nextCircle
                 self.counter = 0
 
-        elif self.state == 'Row Waiting':
-            if currentColumn < destColumn:
-                destination = 90
-            elif currentColumn > destColumn:
-                destination = 270
-            if abs(currAngle - destination) <= 10:
-                self.state = 'Move Row Command'
-            else:
-                wait(10, 'Row Turning')
 
+        ################
+        ### Planning ###
+        ################
+
+        elif self.state == 'Planning':
+            if currentRow == 0:
+                self.tempDest = (destColumn, 0)
+            else:
+                self.tempDest = (currentColumn, destRow)
+            self.state = 'Determine Direction'
 
     def initializeCircle(self):
         circles = [None] * (NUM_COLUMNS+NUM_ROWS)
@@ -421,9 +643,9 @@ class Navigator(object):
                         print(self.dest[0])
 
         self.ipad.close()
-        l = Localize(self.robot)
-        l.localize()
-        l.analyze()
+        # l = Localize(self.robot)
+        # l.localize()
+        # l.analyze()
         self.ipad= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ipad.connect((self.ipadHost, self.ipadPort))
 
@@ -471,7 +693,7 @@ class Navigator(object):
                 cv2.arrowedLine(img, (circle.x, circle.y), 
                     (int(circle.x-60*math.cos(angle*math.pi/180+math.pi/2)), int(circle.y-60*math.sin(angle*math.pi/180+math.pi/2))), 
                     (255, 255, 255), 3)
-                self.betterDoAction((self.bestAngle*180./math.pi) % 360, self.dest[1], self.bestCircle, self.dest[0])
+                self.evenBetterDoAction((self.bestAngle*180./math.pi) % 360, self.dest[1], self.bestCircle, self.dest[0])
                 print(self.command)
                 # l.save(imageIndex)
                 # file.write(str(imageIndex).zfill(4) + ':' + self.command + '\n')

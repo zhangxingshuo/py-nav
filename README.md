@@ -1,4 +1,4 @@
-# py-nav
+# Visual Localization and Navigation
 Navigation of a Raspberry Pi robot using monocular vision and Monte Carlo localization.
 
 ## Setup

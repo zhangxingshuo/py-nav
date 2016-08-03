@@ -2,7 +2,7 @@
 Navigation of a Raspberry Pi robot using monocular vision and Monte Carlo localization.
 
 ## Setup
-Connect to the Raspberry Pi robot and iPad from the client computer using the code provided in the repository py-robot. The visual map must be constructed and stored in a folder called 'map' inside the root directory. Within map, the different locations must be numbered starting from `0`. 
+Connect to the Raspberry Pi robot and iPad from the client computer using the code provided in the repository [py-robot](https://github.com/zhangxingshuo/py-robot). The visual map must be constructed and stored in a folder called 'map' inside the root directory. Within map, the different locations must be numbered starting from `0`. 
 
 ## Usage
 First, if using bag-of-words image retrieval for localization, the dictionaries for the map must be initialized. This is done through the matcher script (see the repository [py-mcl](https://github.com/zhangxingshuo/py-mcl) for specifics on indexes and image matching algorithms). Next, run

@@ -1,4 +1,4 @@
-# Visual Localization and Navigation
+# Robotic Navigation with Monocular Visual Localization and External Odometry
 Navigation of a Raspberry Pi robot using monocular vision and Monte Carlo localization.
 
 ## Setup

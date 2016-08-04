@@ -1,5 +1,5 @@
 # Robotic Navigation with Monocular Visual Localization and External Odometry
-Navigation of a Raspberry Pi robot using monocular vision and Monte Carlo localization.
+Navigation of a Raspberry Pi robot using monocular vision and Monte Carlo localization, with added information from external odometry with iOS device.
 
 ## Setup
 Connect to the Raspberry Pi robot and iPad from the client computer using the code provided in the repository [py-robot](https://github.com/zhangxingshuo/py-robot). Run the scripts to ensure that the connection is established and working. You do not need to keep these running in the background; the `nav.py` script provides connection to both the Pi and the iPad.

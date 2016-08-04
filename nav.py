@@ -16,11 +16,12 @@ class Navigator(object):
         # self.robot = Arduino()
         self.dest = [None, None]
         self.counter = 0
+        self.counter2 = 0
         self.state = 'Idle'
         self.command = 's'
         self.host = '134.173.27.40'
         self.ipadHost = '134.173.29.21'
-        self.ipadPort = 5001
+        self.ipadPort = 5004
         self.port = 5000
         self.robot = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ipad= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -72,6 +73,7 @@ class Navigator(object):
         currentRow = currentCircle.relativeCoord[1]
         destColumn = destCircle.relativeCoord[0]
         destRow = destCircle.relativeCoord[1]
+        threshold = 3
         
         if self.tempDest is not None:
             destColumn = self.tempDest[0]
@@ -122,7 +124,7 @@ class Navigator(object):
 
         elif self.state == 'Pointing':
             if currentColumn == destColumn and currentRow == destRow:
-                if abs(currAngle - destAngle) <= 10:
+                if abs(currAngle - destAngle) <= threshold:
                     self.state = 'Done'
                     return
             if currentColumn == destColumn:
@@ -135,17 +137,36 @@ class Navigator(object):
                     destination = 90
                 else:
                     destination = 270
-            if abs(currAngle - destination) <= 10:
+            if abs(currAngle - destination) <= threshold:
                 self.state = 'Move Command'
             else:
                 self.ts(self.command)
                 self.state = 'Transitioning'
 
         elif self.state == 'Transitioning':
-            transition(3, 'Focusing')
+            if currentColumn == destColumn and currentRow == destRow:
+                if abs(currAngle - destAngle) <= threshold:
+                    self.state = 'Done'
+                    self.ts('s')
+                    return
+            if currentColumn == destColumn:
+                if currentRow < destRow:
+                    destination = 0
+                else:
+                    destination = 180
+            else:
+                if currentColumn < destColumn:
+                    destination = 90
+                else:
+                    destination = 270
+            if abs(currAngle - destination) <= threshold:
+                self.state = 'Move Command'
+            # transition(1, 'Focusing')
+            self.ts('s')
+            self.state = 'Focusing'
 
         elif self.state == 'Focusing':
-            wait(10, 'Pointing')
+            wait(2, 'Pointing')
 
         ###########################################################
         ### Determine Direction (Inter-circle Angle Transition) ###
@@ -174,15 +195,14 @@ class Navigator(object):
             self.state = 'Moving'
 
         elif self.state == 'Moving':
-            self.counter += 1
+            self.counter2 += 1
             if currentRow == destRow and currentColumn == destColumn:
                 self.tempDest = None
                 self.state = 'Initializing'
 
             # self.ts('r')
             # self.ts(self.command)
-            
-            if abs(currAngle - 0) < 10 or abs(currAngle - 360) < 10:
+            if abs(currAngle - 0) < threshold or abs(currAngle - 360) < threshold:
                 directionAngle = 0
                 if currentRow == destRow:
                     self.state = 'Pointing Direction'
@@ -190,7 +210,7 @@ class Navigator(object):
                 for circle in self.circles:
                     if circle.relativeCoord == (currentColumn, currentRow + 1):
                         nextCircle = circle
-            elif abs(currAngle - 90) < 10:
+            elif abs(currAngle - 90) < threshold:
                 directionAngle= 90
                 if currentColumn == destColumn:
                     self.state = 'Pointing Direction'
@@ -198,7 +218,7 @@ class Navigator(object):
                 for circle in self.circles:
                     if circle.relativeCoord == (currentColumn + 1, currentRow):
                         nextCircle = circle
-            elif abs(currAngle - 180) < 10:
+            elif abs(currAngle - 180) < threshold:
                 directionAngle = 180
                 if currentRow == destRow:
                     self.state = 'Pointing Direction'
@@ -206,7 +226,7 @@ class Navigator(object):
                 for circle in self.circles:
                     if circle.relativeCoord == (currentColumn, currentRow - 1):
                         nextCircle = circle
-            elif abs(currAngle - 270) < 10:
+            elif abs(currAngle - 270) < threshold:
                 directionAngle = 270
                 if currentColumn == destColumn:
                     self.state = 'Pointing Direction'
@@ -215,15 +235,14 @@ class Navigator(object):
                     if circle.relativeCoord == (currentColumn - 1, currentRow):
                         nextCircle = circle
             else:
-
                 self.command = 's'
                 self.ts(self.command)
                 self.state = 'Determine Direction'
-                self.counter = 0
+                # self.counter = 0
                 return
-            if self.counter == int(2.9 * self.distances[( (currentColumn, currentRow), nextCircle.relativeCoord )]):
+            if self.counter2 == int(2.86 * self.distances[( (currentColumn, currentRow), nextCircle.relativeCoord )]):
                 self.bestCircle = nextCircle
-                self.counter = 0
+                self.counter2 = 0
 
 
         ################
@@ -302,9 +321,9 @@ class Navigator(object):
                         print(self.dest[0])
 
         self.ipad.close()
-        # l = Localize(self.robot)
-        # l.localize()
-        # l.analyze()
+        l = Localize(self.robot)
+        l.localize()
+        l.analyze()
         self.ipad= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ipad.connect((self.ipadHost, self.ipadPort))
 

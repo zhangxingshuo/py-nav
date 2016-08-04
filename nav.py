@@ -1,10 +1,18 @@
+'''
+Robotic Navigation with Visual Localization and External Odometry
+=================================================================
+
+Uses Monte Carlo Localization algorithm to localize robot within a map,
+then uses external odometry from iOS device and successive localizations
+to navigate to a user-defined destination within the map.
+'''
+
 import cv2
 import numpy as np 
 import time
 import socket
 from Matcher import Matcher
 from local import Localize 
-# from arduino import Arduino
 from GUI import *
 
 NUM_COLUMNS = 7
@@ -13,16 +21,18 @@ NUM_ROWS = 3
 class Navigator(object):
 
     def __init__(self):
-        # self.robot = Arduino()
         self.dest = [None, None]
         self.counter = 0
         self.counter2 = 0
         self.state = 'Idle'
         self.command = 's'
+
+        # IP addresses -- change as needed
         self.host = '134.173.27.40'
         self.ipadHost = '134.173.29.21'
         self.ipadPort = 5004
         self.port = 5000
+
         self.robot = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ipad= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print("Connecting...")
@@ -30,6 +40,8 @@ class Navigator(object):
         self.ipad.connect((self.ipadHost, self.ipadPort))
         print("Connected!!")
         self.tempDest = None
+
+        # dictionary of distances between nodes
         self.distances = {( (0,0), (1,0) ):37,
         ( (1,0), (2,0) ):31.5,
         ( (2,0), (3,0) ):30.5,
@@ -46,7 +58,6 @@ class Navigator(object):
         ( (6,0), (5,0) ):23,
         ( (5,1), (5,0) ):42.5,
         ( (5,2), (5,1) ):37}
-        # self.distances = {((0,0),(1,0)): 37, ((1,0),(2,0)): 31.5, ((2,0),(3,0)): 30.5, ((3,0),(4,0)): 32, (4,,5): 26.5, (5,6): 23, (6,7): 42.5, (7,8):37 }
 
     def read(self, filename):
         file = open(filename, 'r')
@@ -59,9 +70,8 @@ class Navigator(object):
 
     def ts(self, message):
        self.robot.send(str(message).encode()) 
-       # data = ''
        data = self.robot.recv(1024).decode()
-       print (data)
+       print(data)
 
     def write(self, filename):
         file = open(filename, 'w')
@@ -79,6 +89,7 @@ class Navigator(object):
             destColumn = self.tempDest[0]
             destRow = self.tempDest[1]
 
+        # Wait until counter reaches determined point, then send the stop command
         def transition(counter, nextState):
             self.counter += 1
             if self.counter == counter:
@@ -86,12 +97,14 @@ class Navigator(object):
                 self.ts('s')
                 self.state = nextState
 
+        # Wait until counter reaches determined point, then move to next state
         def wait(counter, nextState):
             self.counter += 1
             if self.counter == counter:
                 self.counter = 0
                 self.state = nextState
 
+        # Given destination angle, determine direction to turn in
         def determineAngle(destination, nextState):
             difference = destination - currAngle
             if difference > 0:
@@ -106,7 +119,7 @@ class Navigator(object):
                     self.command = 'l'
             self.state = nextState
 
-
+        # Initial state -- handle which state to move to depending on current position and destination
         if self.state == 'Initializing':
             if currentColumn == destColumn and currentRow == destRow:
                 self.state = 'Pointing Direction'
@@ -122,6 +135,7 @@ class Navigator(object):
         elif self.state == 'Pointing Direction':
             determineAngle(destAngle, 'Pointing')
 
+        # Turn until robot is facing the desired direction
         elif self.state == 'Pointing':
             if currentColumn == destColumn and currentRow == destRow:
                 if abs(currAngle - destAngle) <= threshold:
@@ -200,8 +214,6 @@ class Navigator(object):
                 self.tempDest = None
                 self.state = 'Initializing'
 
-            # self.ts('r')
-            # self.ts(self.command)
             if abs(currAngle - 0) < threshold or abs(currAngle - 360) < threshold:
                 directionAngle = 0
                 if currentRow == destRow:
@@ -238,7 +250,6 @@ class Navigator(object):
                 self.command = 's'
                 self.ts(self.command)
                 self.state = 'Determine Direction'
-                # self.counter = 0
                 return
             if self.counter2 == int(2.86 * self.distances[( (currentColumn, currentRow), nextCircle.relativeCoord )]):
                 self.bestCircle = nextCircle
@@ -279,7 +290,6 @@ class Navigator(object):
         bestGuesses = [[content[x], content[x+1]] for x in range(len(content) - 1 ) [::2]    ]
         return bestGuesses
     
-
     def IntervalRun(self):
         img = np.zeros((480 + 150*NUM_ROWS,200 + 150 * NUM_COLUMNS,3), np.uint8)
         cv2.namedWindow('GUI')
@@ -316,7 +326,6 @@ class Navigator(object):
                             angle += 360
 
                         self.dest[1] = angle
-                        # cirlceCoordinate = circle.relativeCoord
                         self.dest[0] = circle 
                         print(self.dest[0])
 
@@ -363,7 +372,6 @@ class Navigator(object):
             currentAng = self.readGyro()
 
             if self.dest[0] != None and self.dest[1] != None and self.state != 'Done':
-                # file = open('commands.txt', 'a')
                 circle = self.dest[0]
                 angle = self.dest[1]
                 
@@ -373,8 +381,6 @@ class Navigator(object):
                     (255, 255, 255), 3)
                 self.handleAction((self.bestAngle*180./math.pi) % 360, self.dest[1], self.bestCircle, self.dest[0])
                 print(self.command)
-                # l.save(imageIndex)
-                # file.write(str(imageIndex).zfill(4) + ':' + self.command + '\n')
                 imageIndex += 1
             else:
                 self.dest[0] = None

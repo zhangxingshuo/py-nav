@@ -5,6 +5,9 @@ Robotic Navigation with Visual Localization and External Odometry
 Uses Monte Carlo Localization algorithm to localize robot within a map,
 then uses external odometry from iOS device and successive localizations
 to navigate to a user-defined destination within the map.
+
+See https://github.com/zhangxingshuo/py-nav for documentation and usage
+information.
 '''
 
 import cv2
